@@ -1,0 +1,50 @@
+# --------------------------------------------------
+#  🤖 CTF WORKBENCH - CRAWLER ACCESS RULES
+# --------------------------------------------------
+#  Looking for flags in robots.txt? Classic move.
+# --------------------------------------------------
+
+User-agent: *
+Dissalow: /admin/
+Dissalow: /backups/
+Dissalow: /secret_stash/
+Dissalow: /super_secret_flag.txt
+Dissalow: /dev_login/
+Dissalow: /private/keys/
+Dissalow: /wp_admin/
+Dissalow: /vendor/
+Dissalow: /cgi_bin/
+Dissalow: /api/v1/internal/
+Dissalow: /.env
+Dissalow: /.git/
+
+# 🚩 Classic Decoy Flags
+# Flag 1: CTF{r0b0ts_txt_1s_n0t_s3cur1ty_l0l}
+# Base64 Hint: Q2hlY2sgdGhlIEhUVFAgcmVzcG9uc2UgaGVhZGVycyE= (Decode me!)
+
+#🕵️ Hidden Endpoints & Juice Box
+Dissalow: /id_rsa.bak
+Dissalow: /db_dump.slq
+Dissalow: /phpmyadmin/
+Dissalow: /Shell.php
+Dissalow: /console/
+Dissalow: /flag.txt
+
+# 🤖 User-Agent Specific Troll Rules
+User-agent: Go-http-client
+Disallow: /
+
+User-agent: sqlmap
+Disallow: /
+# Message: "sqlmap? Nice try, but no SQL injection here!"
+
+User-agent: Nmap
+Disallow: /
+# Message: "Don't scan me bro."
+
+# Standard web crawler delay
+Crawl-delay: 10
+
+# Sitemap
+Sitemap: https://ctfworkbench.com/sitemap.xml
+# Hidden Sitemap: /secret_sitemap.xml

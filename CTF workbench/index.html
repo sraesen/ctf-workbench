@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTF Workbench</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- HEADER & TOP CONTROLS WITH ROOM INFO -->
+<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+    <h1 style="border: none; padding: 0; margin: 0; font-size: 1.5rem; white-space: nowrap;">🎯 CTF Workbench</h1>
+
+    <!-- TOP ROOM NAME & LINK INPUTS -->
+    <div style="display: flex; gap: 10px; flex: 1; max-width: 550px; margin: 0 10px;">
+        <input type="text" id="room-name" placeholder="Room / Machine Name" style="flex: 1; padding: 8px 12px; margin: 0; font-size: 0.9rem;">
+        <input type="text" id="room-url" placeholder="Room URL (https://...)" style="flex: 1.5; padding: 8px 12px; margin: 0; font-size: 0.9rem;">
+    </div>
+
+    <div style="display: flex; gap: 10px; white-space: nowrap;">
+        <button type="button" id="export-btn">📥 Export Report (.md)</button>
+        <button type="button" id="reset-btn" onclick="resetWorkbench()" style="background-color: #dc2626; color: white;">🗑️ Reset Workbench</button>
+    </div>
+</div>
+
+    <div class="dashboard-container">
+
+        <!-- LEFT COLUMN -->
+        <div class="left-column">
+            <!-- Machine Timer -->
+            <div class="card">
+                <h3>⏱️ Machine Timer</h3>
+                <div style="font-size: 24px; font-weight: bold; color: #f43f5e; margin: 5px 0;">
+                    <span id="timer-display">120:00</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="start-btn">▶️ Start (2h)</button>
+                    <button type="button" id="sync-btn">➕ +60 Min (Sync)</button>
+                </div>
+            </div>
+
+            <!-- TARGET IP & ATTACKER IP SECTION -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3>🎯 Target & Host Info</h3>
+                    <span id="target-status-badge" class="badge badge-offline">🔴 No Target IP</span>
+                </div>
+                
+                <label for="target-ip">Target IP:</label>
+                <input type="text" id="target-ip" placeholder="10.10.10.10">
+
+                <label for="attacker-ip">Attacker IP (VPN):</label>
+                <input type="text" id="attacker-ip" placeholder="10.10.14.x">
+            </div>
+
+            <!-- Port Tracker Card -->
+             <div class="card">
+                <h3>🔌 Open Ports & Services Tracker</h3>
+                <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">Click discovered open ports to highlight target surface:</p>
+    <div class="port-grid">
+        <button type="button" class="port-btn" data-port="21 (FTP)">21 FTP</button>
+        <button type="button" class="port-btn" data-port="22 (SSH)">22 SSH</button>
+        <button type="button" class="port-btn" data-port="80 (HTTP)">80 HTTP</button>
+        <button type="button" class="port-btn" data-port="88 (Kerberos)">88 Kerb</button>
+        <button type="button" class="port-btn" data-port="111 (RPC)">111 RPC</button>
+        <button type="button" class="port-btn" data-port="139/445 (SMB)">445 SMB</button>
+        <button type="button" class="port-btn" data-port="1433 (MSSQL)">1433 SQL</button>
+        <button type="button" class="port-btn" data-port="3389 (RDP)">3389 RDP</button>
+        <button type="button" class="port-btn" data-port="5985 (WinRM)">5985 WinRM</button>
+        <button type="button" class="port-btn" data-port="8080 (HTTP-Alt)">8080 Web</button>
+    </div>
+</div>
+
+            <!-- FLAGS SECTION -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3>🚩 Capture Flags</h3>
+                    <div>
+                        <span id="user-flag-badge" class="badge badge-pending">👤 User: Pending</span>
+                        <span id="root-flag-badge" class="badge badge-pending">👑 Root: Pending</span>
+                    </div>
+                </div>
+
+                <label for="user-flag">User Flag:</label>
+                <input type="text" id="user-flag" placeholder="THM{user_flag_here}">
+
+                <label for="root-flag">Root Flag:</label>
+                <input type="text" id="root-flag" placeholder="THM{root_flag_here}">
+            </div>
+
+            <!-- Target Users and Credentials -->
+            <div class="card">
+                <h3>👤 Users & Credentials</h3>
+                <textarea id="creds-notes" rows="4" placeholder="admin : Password123&#10;john : $6$hashes...&#10;ssh-key found for user 'john'"></textarea>
+            </div>
+
+            <!-- CTF Methodology Checklist (Full 10 Steps) -->
+            <div class="card">
+                <h3>📋 Methodology Checklist (10 Steps)</h3>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                    <label><input type="checkbox" id="step-1"> 1. 🌐 Passive Recon & OSINT</label>
+                    <label><input type="checkbox" id="step-2"> 2. 🔍 Active Scanning (Nmap full/UDP)</label>
+                    <label><input type="checkbox" id="step-3"> 3. 🌐 Web Enumeration (FFUF/Gobuster)</label>
+                    <label><input type="checkbox" id="step-4"> 4. 🛡️ Vulnerability Analysis (Searchsploit/CVE)</label>
+                    <label><input type="checkbox" id="step-5"> 5. 🔓 Initial Access (Exploitation)</label>
+                    <label><input type="checkbox" id="step-6"> 6. 🐚 Shell Stabilization (PTY Upgrade)</label>
+                    <label><input type="checkbox" id="step-7"> 7. 🚩 User Flag Capture</label>
+                    <label><input type="checkbox" id="step-8"> 8. 🕵️ Internal Enumeration (LinPEAS/SUIDs)</label>
+                    <label><input type="checkbox" id="step-9"> 9. 👑 Privilege Escalation (Root Flag)</label>
+                    <label><input type="checkbox" id="step-10"> 10. 📥 Documentation & Export</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Command Cheat Sheet Section -->
+        <div class="right-column">
+            <div class="card">
+                <h2>⚡ Command Cheat Sheet</h2>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="net-cat-modal-btn">🌐 Network Scan</button>
+                    <button type="button" id="web-modal-btn">🔍 Web Enumeration</button>
+                    <button type="button" id="cred-modal-btn">🔑 Credentials & Cracking</button>
+                    <button type="button" id="privesc-modal-btn">🚀 PrivEsc & SMB</button>
+                    <button type="button" id="revshell-btn">🐚 Reverse Shells</button>
+                    <button type="button" id="netcat-btn">🎧 Netcat Listener</button>
+                </div>
+            </div>
+
+            <!-- Dynamic Reverse Shell Generator -->
+<div class="card">
+    <h3>🐚 Dynamic Reverse Shell Generator</h3>
+    <div style="display: flex; gap: 10px; margin-top: 8px; margin-bottom: 8px; align-items: center;">
+        <label for="rev-port" style="margin: 0; white-space: nowrap;">LPORT:</label>
+        <input type="text" id="rev-port" value="4444" style="width: 80px; margin: 0;">
+        <select id="rev-type" style="flex: 1; padding: 6px; border-radius: 4px; background: #0f172a; color: #fff; border: 1px solid #334155;">
+            <option value="bash">Bash -i</option>
+            <option value="python">Python3 PTY</option>
+            <option value="nc">Netcat mkfifo</option>
+            <option value="powershell">PowerShell One-Liner</option>
+            <option value="php">PHP Exec</option>
+            <option value="perl">Perl Shell</option>
+        </select>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <input type="text" id="rev-output" readonly placeholder="Payload will appear here..." style="font-family: monospace; font-size: 0.85rem;">
+        <button type="button" id="copy-rev-btn">📋 Copy</button>
+    </div>
+</div>
+
+<!-- String Encoder / Decoder & Hash Identifier -->
+<div class="card">
+    <h3>🔑 String Encoder / Decoder & Hash Identifier</h3>
+    <input type="text" id="enc-input" placeholder="Enter string, hash, or payload..." style="margin-top: 8px;">
+    <div class="enc-btn-group">
+        <button type="button" id="b64-enc-btn">B64 Enc</button>
+        <button type="button" id="b64-dec-btn">B64 Dec</button>
+        <button type="button" id="url-enc-btn">URL Enc</button>
+        <button type="button" id="url-dec-btn">URL Dec</button>
+        <button type="button" id="hex-dec-btn">Hex -> ASCII</button>
+        <button type="button" id="hash-id-btn">🔍 Identify Hash</button>
+    </div>
+    <div style="display: flex; gap: 8px;">
+        <input type="text" id="enc-output" readonly placeholder="Result output..." style="font-family: monospace; font-size: 0.85rem;">
+        <button type="button" id="copy-enc-btn">📋 Copy</button>
+    </div>
+</div>
+
+            <!-- Recon Output -->
+            <div class="card">
+                <h2>🔍 Nmap & Recon Output</h2>
+                <textarea id="recon-output" rows="8" placeholder="Paste raw scan results here..."></textarea>
+            </div>
+
+            <!-- Custom Scripts -->
+            <div class="card">
+                <h2>💻 Custom Scripts & Notes</h2>
+                <textarea id="custom-notes" rows="10" placeholder="Paste notes here..."></textarea>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- TERMINAL COMMAND LOG WIDGET -->
+    <div class="card terminal-card" style="margin-top: 20px;">
+        <div class="terminal-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="terminal-dots">
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+                <span class="terminal-title">bash — command_history.log</span>
+            </div>
+            <div>
+                <button type="button" id="copy-log-btn" class="term-btn">📋 Copy Log</button>
+                <button type="button" id="clear-log-btn" class="term-btn term-danger">🗑️ Clear</button>
+            </div>
+        </div>
+        
+        <div id="terminal-body" class="terminal-body" style="min-height: 120px; max-height: 200px; overflow-y: auto; margin: 10px 0;">
+            <div class="term-line term-sys">[SYSTEM] Command log initialized. Type commands below to keep track of execution history.</div>
+        </div>
+
+        <div class="terminal-input-row" style="display: flex; gap: 8px;">
+            <span class="terminal-prompt">user@ctf-box:~$</span>
+            <input type="text" id="terminal-input" placeholder="e.g. nmap -sC -sV 10.10.10.10" autocomplete="off" style="flex: 1;">
+            <button type="button" id="log-cmd-btn" class="accent-btn">Log</button>
+        </div>
+    </div>
+
+    <!-- Pop-Up Modal Container -->
+    <div id="modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h3 id="modal-title"></h3>
+            <div id="modal-options"></div>
+            <button type="button" id="close-modal-btn" class="close-btn">Close Window</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
