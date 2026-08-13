@@ -9,26 +9,29 @@
 
 <body>
 
-<!-- HEADER & TOP CONTROLS WITH ROOM INFO -->
-<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-    <h1 style="border: none; padding: 0; margin: 0; font-size: 1.5rem; white-space: nowrap;">🎯 CTF Workbench</h1>
+    <!-- Header & Top Controls -->
+    <header class="header-bar" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <h1 style="border: none; padding: 0; margin: 0; font-size: 1.5rem; white-space: nowrap;">🎯 CTF Workbench</h1>
 
-    <!-- TOP ROOM NAME & LINK INPUTS -->
-    <div style="display: flex; gap: 10px; flex: 1; max-width: 550px; margin: 0 10px;">
-        <input type="text" id="room-name" placeholder="Room / Machine Name" style="flex: 1; padding: 8px 12px; margin: 0; font-size: 0.9rem;">
-        <input type="text" id="room-url" placeholder="Room URL (https://...)" style="flex: 1.5; padding: 8px 12px; margin: 0; font-size: 0.9rem;">
-    </div>
+        <!-- Room Information Inputs -->
+        <div style="display: flex; gap: 10px; flex: 1; max-width: 550px; margin: 0 10px;">
+            <input type="text" id="room-name" placeholder="Room / Machine Name" style="flex: 1; padding: 8px 12px; margin: 0; font-size: 0.9rem;">
+            <input type="text" id="room-url" placeholder="Room URL (https://...)" style="flex: 1.5; padding: 8px 12px; margin: 0; font-size: 0.9rem;">
+        </div>
 
-    <div style="display: flex; gap: 10px; white-space: nowrap;">
-        <button type="button" id="export-btn">📥 Export Report (.md)</button>
-        <button type="button" id="reset-btn" onclick="resetWorkbench()" style="background-color: #dc2626; color: white;">🗑️ Reset Workbench</button>
-    </div>
-</div>
+        <!-- Global Control Buttons -->
+        <div style="display: flex; gap: 10px; white-space: nowrap;">
+            <button type="button" id="export-btn">📥 Export Report (.md)</button>
+            <button type="button" id="reset-btn" onclick="resetWorkbench()" style="background-color: #dc2626; color: white;">🗑️ Reset Workbench</button>
+        </div>
+    </header>
 
+    <!-- Main Dashboard Container -->
     <div class="dashboard-container">
 
-        <!-- LEFT COLUMN -->
+        <!-- Left Column -->
         <div class="left-column">
+            
             <!-- Machine Timer -->
             <div class="card">
                 <h3>⏱️ Machine Timer</h3>
@@ -41,7 +44,7 @@
                 </div>
             </div>
 
-            <!-- TARGET IP & ATTACKER IP SECTION -->
+            <!-- Target & Host Info -->
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <h3>🎯 Target & Host Info</h3>
@@ -55,25 +58,25 @@
                 <input type="text" id="attacker-ip" placeholder="10.10.14.x">
             </div>
 
-            <!-- Port Tracker Card -->
-             <div class="card">
+            <!-- Open Ports Tracker -->
+            <div class="card">
                 <h3>🔌 Open Ports & Services Tracker</h3>
                 <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">Click discovered open ports to highlight target surface:</p>
-    <div class="port-grid">
-        <button type="button" class="port-btn" data-port="21 (FTP)">21 FTP</button>
-        <button type="button" class="port-btn" data-port="22 (SSH)">22 SSH</button>
-        <button type="button" class="port-btn" data-port="80 (HTTP)">80 HTTP</button>
-        <button type="button" class="port-btn" data-port="88 (Kerberos)">88 Kerb</button>
-        <button type="button" class="port-btn" data-port="111 (RPC)">111 RPC</button>
-        <button type="button" class="port-btn" data-port="139/445 (SMB)">445 SMB</button>
-        <button type="button" class="port-btn" data-port="1433 (MSSQL)">1433 SQL</button>
-        <button type="button" class="port-btn" data-port="3389 (RDP)">3389 RDP</button>
-        <button type="button" class="port-btn" data-port="5985 (WinRM)">5985 WinRM</button>
-        <button type="button" class="port-btn" data-port="8080 (HTTP-Alt)">8080 Web</button>
-    </div>
-</div>
+                <div class="port-grid">
+                    <button type="button" class="port-btn" data-port="21 (FTP)">21 FTP</button>
+                    <button type="button" class="port-btn" data-port="22 (SSH)">22 SSH</button>
+                    <button type="button" class="port-btn" data-port="80 (HTTP)">80 HTTP</button>
+                    <button type="button" class="port-btn" data-port="88 (Kerberos)">88 Kerb</button>
+                    <button type="button" class="port-btn" data-port="111 (RPC)">111 RPC</button>
+                    <button type="button" class="port-btn" data-port="139/445 (SMB)">445 SMB</button>
+                    <button type="button" class="port-btn" data-port="1433 (MSSQL)">1433 SQL</button>
+                    <button type="button" class="port-btn" data-port="3389 (RDP)">3389 RDP</button>
+                    <button type="button" class="port-btn" data-port="5985 (WinRM)">5985 WinRM</button>
+                    <button type="button" class="port-btn" data-port="8080 (HTTP-Alt)">8080 Web</button>
+                </div>
+            </div>
 
-            <!-- FLAGS SECTION -->
+            <!-- Capture Flags -->
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <h3>🚩 Capture Flags</h3>
@@ -90,13 +93,13 @@
                 <input type="text" id="root-flag" placeholder="THM{root_flag_here}">
             </div>
 
-            <!-- Target Users and Credentials -->
+            <!-- Users & Credentials -->
             <div class="card">
                 <h3>👤 Users & Credentials</h3>
                 <textarea id="creds-notes" rows="4" placeholder="admin : Password123&#10;john : $6$hashes...&#10;ssh-key found for user 'john'"></textarea>
             </div>
 
-            <!-- CTF Methodology Checklist (Full 10 Steps) -->
+            <!-- CTF Methodology Checklist -->
             <div class="card">
                 <h3>📋 Methodology Checklist (10 Steps)</h3>
                 <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
@@ -112,10 +115,13 @@
                     <label><input type="checkbox" id="step-10"> 10. 📥 Documentation & Export</label>
                 </div>
             </div>
+
         </div>
 
-        <!-- RIGHT COLUMN: Command Cheat Sheet Section -->
+        <!-- Right Column -->
         <div class="right-column">
+            
+            <!-- Command Cheat Sheet -->
             <div class="card">
                 <h2>⚡ Command Cheat Sheet</h2>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -129,43 +135,43 @@
             </div>
 
             <!-- Dynamic Reverse Shell Generator -->
-<div class="card">
-    <h3>🐚 Dynamic Reverse Shell Generator</h3>
-    <div style="display: flex; gap: 10px; margin-top: 8px; margin-bottom: 8px; align-items: center;">
-        <label for="rev-port" style="margin: 0; white-space: nowrap;">LPORT:</label>
-        <input type="text" id="rev-port" value="4444" style="width: 80px; margin: 0;">
-        <select id="rev-type" style="flex: 1; padding: 6px; border-radius: 4px; background: #0f172a; color: #fff; border: 1px solid #334155;">
-            <option value="bash">Bash -i</option>
-            <option value="python">Python3 PTY</option>
-            <option value="nc">Netcat mkfifo</option>
-            <option value="powershell">PowerShell One-Liner</option>
-            <option value="php">PHP Exec</option>
-            <option value="perl">Perl Shell</option>
-        </select>
-    </div>
-    <div style="display: flex; gap: 8px;">
-        <input type="text" id="rev-output" readonly placeholder="Payload will appear here..." style="font-family: monospace; font-size: 0.85rem;">
-        <button type="button" id="copy-rev-btn">📋 Copy</button>
-    </div>
-</div>
+            <div class="card">
+                <h3>🐚 Dynamic Reverse Shell Generator</h3>
+                <div style="display: flex; gap: 10px; margin-top: 8px; margin-bottom: 8px; align-items: center;">
+                    <label for="rev-port" style="margin: 0; white-space: nowrap;">LPORT:</label>
+                    <input type="text" id="rev-port" value="4444" style="width: 80px; margin: 0;">
+                    <select id="rev-type" style="flex: 1; padding: 6px; border-radius: 4px; background: #0f172a; color: #fff; border: 1px solid #334155;">
+                        <option value="bash">Bash -i</option>
+                        <option value="python">Python3 PTY</option>
+                        <option value="nc">Netcat mkfifo</option>
+                        <option value="powershell">PowerShell One-Liner</option>
+                        <option value="php">PHP Exec</option>
+                        <option value="perl">Perl Shell</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="rev-output" readonly placeholder="Payload will appear here..." style="font-family: monospace; font-size: 0.85rem;">
+                    <button type="button" id="copy-rev-btn">📋 Copy</button>
+                </div>
+            </div>
 
-<!-- String Encoder / Decoder & Hash Identifier -->
-<div class="card">
-    <h3>🔑 String Encoder / Decoder & Hash Identifier</h3>
-    <input type="text" id="enc-input" placeholder="Enter string, hash, or payload..." style="margin-top: 8px;">
-    <div class="enc-btn-group">
-        <button type="button" id="b64-enc-btn">B64 Enc</button>
-        <button type="button" id="b64-dec-btn">B64 Dec</button>
-        <button type="button" id="url-enc-btn">URL Enc</button>
-        <button type="button" id="url-dec-btn">URL Dec</button>
-        <button type="button" id="hex-dec-btn">Hex -> ASCII</button>
-        <button type="button" id="hash-id-btn">🔍 Identify Hash</button>
-    </div>
-    <div style="display: flex; gap: 8px;">
-        <input type="text" id="enc-output" readonly placeholder="Result output..." style="font-family: monospace; font-size: 0.85rem;">
-        <button type="button" id="copy-enc-btn">📋 Copy</button>
-    </div>
-</div>
+            <!-- String Encoder / Decoder & Hash Identifier -->
+            <div class="card">
+                <h3>🔑 String Encoder / Decoder & Hash Identifier</h3>
+                <input type="text" id="enc-input" placeholder="Enter string, hash, or payload..." style="margin-top: 8px;">
+                <div class="enc-btn-group">
+                    <button type="button" id="b64-enc-btn">B64 Enc</button>
+                    <button type="button" id="b64-dec-btn">B64 Dec</button>
+                    <button type="button" id="url-enc-btn">URL Enc</button>
+                    <button type="button" id="url-dec-btn">URL Dec</button>
+                    <button type="button" id="hex-dec-btn">Hex -> ASCII</button>
+                    <button type="button" id="hash-id-btn">🔍 Identify Hash</button>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="enc-output" readonly placeholder="Result output..." style="font-family: monospace; font-size: 0.85rem;">
+                    <button type="button" id="copy-enc-btn">📋 Copy</button>
+                </div>
+            </div>
 
             <!-- Recon Output -->
             <div class="card">
@@ -173,16 +179,17 @@
                 <textarea id="recon-output" rows="8" placeholder="Paste raw scan results here..."></textarea>
             </div>
 
-            <!-- Custom Scripts -->
+            <!-- Custom Scripts & Notes -->
             <div class="card">
                 <h2>💻 Custom Scripts & Notes</h2>
                 <textarea id="custom-notes" rows="10" placeholder="Paste notes here..."></textarea>
             </div>
+
         </div>
 
     </div>
 
-    <!-- TERMINAL COMMAND LOG WIDGET -->
+    <!-- Terminal Command Log Widget -->
     <div class="card terminal-card" style="margin-top: 20px;">
         <div class="terminal-header" style="display: flex; justify-content: space-between; align-items: center;">
             <div class="terminal-dots">
