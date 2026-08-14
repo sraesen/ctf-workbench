@@ -8,52 +8,28 @@
 
 ---
 
-## ✨ Features Breakdown
+## Why I Built This
 
-### 🎯 Target & Room Tracking
-- **Header Banner:** Dedicated inputs for **Target IP**, **LHOST (Your IP)**, **Room Name**, and **Challenge Link** pinned at the top.
-- **Instant Variable Copy:** Quick-copy buttons for your Target IP and LHOST to speed up terminal commands.
+I got tired of juggling 10 different browser tabs, random text files, and terminal commands every time I jumped onto a CTF machine. I built this single-page dashboard so everything lives in one clean workspace right in the browser.
 
-### 🛡️ AV-Bypass Reverse Shell Generator
-- **Multi-Language Shells:** One-click reverse shell templates for Bash, Python, NC, PowerShell, PHP, and Perl.
-- **Base64 AV-Obfuscation:** Encodes payloads automatically to prevent local Antivirus and Windows Defender from flagging your files during generation.
+## Features
 
-### 🔌 Port Surface Tracker
-- **Interactive Toggles:** Clickable status chips for common ports (`22`, `80`, `445`, `8080`, etc.) to visually track open attack vectors.
-- **Custom Port Input:** Add any custom port number to the tracking list on the fly.
-
-### 🚩 Flags & Loot Box
-- **Flag Collector:** Separate fields for **User Flag** and **Root Flag** with direct copy actions.
-- **Loot & Credentials Log:** Track discovered usernames, passwords, SSH keys, and tokens in a structured notepad.
-
-### 🔑 Encoders, Decoders & Hash ID
-- **Multi-Format Encoder:** Convert strings between **Base64**, **URL**, and **Hex** instantly.
-- **Hash Identifier:** Automatic hash length detection to quickly narrow down unknown hash types (MD5, SHA1, SHA256, NTLM, etc.).
-
-### 📋 Methodology Checklist & Command History
-- **Pentest Methodology:** Interactive step-by-step checklist covering Recon, Enumeration, Exploitation, Privilege Escalation, and Loot Collection.
-- **Terminal Command Log:** Add and organize used commands with formatted blocks for quick reference.
-
-### 💡 Quick Cheat Sheets & Notes
-- **Cheat Sheet Drawer:** Embedded quick references for Linux privilege escalation, Nmap scans, reverse shell syntax, and GTFOBins.
-- **Freeform Notes:** Markdown-friendly general notes area for rough thoughts and raw scan outputs.
-
-### 📄 One-Click Markdown Export & Session Management
-- **Automated `.md` Report Export:** Download a complete, pre-formatted Write-Up (`writeup.md`) combining all your target info, open ports, flags, loot, notes, and commands.
-- **Persistence & Reset:** Auto-saves every input to browser `localStorage` so you never lose progress on page refresh. Includes a **Clear Workbench** option to reset for the next target.
-
-### 🤖 CTF Easter Eggs
-- Custom `robots.txt` complete with hidden endpoints, decoy flags, troll rules, and base64 hints for anyone poking around the source code.
+- **Target Tracker:** Keep track of IPs, LHOST, and room links.
+- **Reverse Shell Generator:** Quickly generate Bash, Python, Netcat, and PowerShell payloads.
+- **Port Tracker:** Clickable chips for common ports to map out attack surfaces.
+- **Flags & Loot:** Save user/root flags and discovered credentials safely.
+- **Encoders & Hash ID:** Base64, URL, hex tools, and basic hash detection.
+- **Checklist & Command Log:** Step-by-step pentesting checklist and a terminal history logger.
+- **Markdown Export:** Download your entire session as a ready-to-use write-up file.
+- **Local Storage:** Everything auto-saves locally so a refresh never wipes your progress.
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
-### 🌐 Live Version
-No installation or build required! Access the hosted version:
+### Live Version
 👉 **[sraesen.github.io/ctf-workbench](https://sraesen.github.io/ctf-workbench/)**
 
-### 💻 Run Locally
-1. Clone the repository:
-   ```bash
-   git clone [https://github.com/sraesen/ctf-workbench.git](https://github.com/sraesen/ctf-workbench.git)
+### Run Locally
+```bash
+git clone [https://github.com/sraesen/ctf-workbench.git](https://github.com/sraesen/ctf-workbench.git)
