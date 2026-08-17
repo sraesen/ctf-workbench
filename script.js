@@ -160,19 +160,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // --- Open Ports Tracker ---
-    const portButtons = document.querySelectorAll('.port-btn');
-    portButtons.forEach(btn => {
-        const portKey = 'port_' + btn.getAttribute('data-port');
-        if (localStorage.getItem(portKey) === 'true') {
-            btn.classList.add('active');
-        }
-        btn.addEventListener('click', () => {
-            btn.classList.toggle('active');
-            localStorage.setItem(portKey, btn.classList.contains('active'));
-        });
-    });
-
     // --- Dynamic Reverse Shell Generator ---
     const revPortInput = document.getElementById('rev-port');
     const attackerIpInput = document.getElementById('attacker-ip');
@@ -471,11 +458,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const reconOutput = document.getElementById('recon-output')?.value || 'No scans recorded.';
             const customNotes = document.getElementById('custom-notes')?.value || 'No notes.';
 
-            let activePorts = [];
-            portButtons.forEach(btn => {
-                if (btn.classList.contains('active')) activePorts.push(btn.getAttribute('data-port'));
-            });
-
             let checklistMd = '';
             for (let i = 1; i <= 10; i++) {
                 const box = document.getElementById(`step-${i}`);
@@ -494,9 +476,6 @@ document.addEventListener('DOMContentLoaded', function () {
 ## 🚩 Flags
 - **User Flag:** \`${userFlag}\`
 - **Root Flag:** \`${rootFlag}\`
-
-## 🔌 Open Ports & Services
-${activePorts.length > 0 ? activePorts.map(p => `- ${p}`).join('\n') : '- None recorded'}
 
 ## 👤 Credentials & Users
 \`\`\`text
