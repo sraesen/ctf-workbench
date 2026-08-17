@@ -13,7 +13,7 @@ I build it because it was always annoying to have multiple tabs open and having 
 
 ## the dashboard:
 
--two buttons on the top one for an report with the info you gave it so you have a bit of a easy writeup and also a reset workbench button because it saves info on localstorage so if you accidentally refresh the page it's still all here.
+- two buttons on the top one for an report with the info you gave it so you have a bit of a easy writeup and also a reset workbench button because it saves info on localstorage so if you accidentally refresh the page it's still all here.
 -  machine timer with button's so you know when you're room is about to expire (mostly for tryhackme)
 - an input area where you can paste you're target ip and attacker ip (tryhackme attackbox, own vpn or hackthebox vpn ip address)
 - flags input area where you can paste the flags in
